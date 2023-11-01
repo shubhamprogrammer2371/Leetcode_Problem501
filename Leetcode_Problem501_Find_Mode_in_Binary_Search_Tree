@@ -1,0 +1,139 @@
+/**
+ * Definition for a binary tree node.
+ * struct TreeNode {
+ *     int val;
+ *     struct TreeNode *left;
+ *     struct TreeNode *right;
+ * };
+ */
+/**
+ * Note: The returned array must be malloced, assume caller calls free().
+ */
+typedef struct TreeNode TreeNode;
+
+static int *g_rets , g_retsLen , g_maxFreq , g_lastVal , g_lastValFreq;
+
+static void findMode_recurse(const TreeNode * const pNode)
+{
+	if (pNode->left)
+		findMode_recurse(pNode->left);
+	const int curVal = pNode->val;
+	if (curVal == g_lastVal)
+		g_lastValFreq++;
+	else 
+    {
+		if (g_lastValFreq == g_maxFreq)
+			g_rets[g_retsLen++] = g_lastVal;
+	    else if (g_lastValFreq > g_maxFreq)
+        {
+			g_rets[0] = g_lastVal;
+			g_retsLen = 1;
+			g_maxFreq = g_lastValFreq;
+		}
+		g_lastVal = curVal;
+		g_lastValFreq = 1;
+	}
+	if (pNode->right)
+		findMode_recurse(pNode->right);
+}
+
+int * findMode( const TreeNode * const pRoot,int * const pRetsLen)
+{
+	g_rets = (int *)malloc(sizeof (int) * 10000);
+	g_retsLen = 0;
+	g_maxFreq = 0;
+	const TreeNode* pLeftMost = pRoot;
+	while (pLeftMost->left)
+		pLeftMost = pLeftMost->left;
+	g_lastVal = pLeftMost->val;
+	g_lastValFreq = 0;
+	TreeNode* pRightMost = (TreeNode *)pRoot;
+	while (pRightMost->right)
+		pRightMost = pRightMost->right;
+	assert(pRightMost->val != INT_MAX);
+	static const TreeNode dummyNode = {INT_MAX, NULL, NULL};
+	pRightMost->right = (TreeNode*)&dummyNode;
+	findMode_recurse(pRoot);
+	pRightMost->right = NULL;
+	*pRetsLen = g_retsLen;
+	return g_rets;
+}
+
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+/**
+ * Definition for a binary tree node.
+ * struct TreeNode {
+ *     int val;
+ *     struct TreeNode *left;
+ *     struct TreeNode *right;
+ * };
+ */
+/**
+ * Note: The returned array must be malloced, assume caller calls free().
+ */
+typedef struct item {
+    int val;
+    unsigned short freq;
+    struct item *next;
+} item_t;
+
+static item_t *hash[433];
+int countFreq(struct TreeNode* root, int max, int *total)
+{
+    if (root) 
+    {
+        item_t *hdr = NULL;
+        int idx = (root->val + 100000) % 433;
+        (*total)++;
+        for (hdr = hash[idx]; hdr; hdr = hdr->next) 
+        {
+            if (hdr->val == root->val) 
+            {
+                hdr->freq++;
+                break;
+            }
+        }
+        if (!hdr) 
+        {
+            hdr = (item_t *)malloc(sizeof(item_t));
+            hdr->val = root->val;
+            hdr->freq = 1;
+            hdr->next = hash[idx];
+            hash[idx] = hdr;
+        }
+        if (hdr->freq > max)
+            max = hdr->freq;
+        max = countFreq(root->left, max, total);
+        max = countFreq(root->right, max, total);
+    }
+    return max;
+}
+
+int get433esAndRelease(int max, int *ans)
+{
+    int len = 0;
+    for (int i = 0; i < 433; i++) 
+    {
+        for (item_t *hdr = hash[i], *del; hdr; ) 
+        {
+            if (hdr->freq == max)
+                ans[len++] = hdr->val;
+            del = hdr;
+            hdr = hdr->next;
+            free(del);
+        }
+    }
+    return len;
+}
+
+int* findMode(struct TreeNode* root, int* returnSize){
+    int *ans, total = 0, max;
+    memset((void *)hash, 0, sizeof(hash));
+    max = countFreq(root, INT_MIN, &total);
+    ans = (int *)malloc(sizeof(int) * total / max);
+    *returnSize = get433esAndRelease(max, ans);
+    return ans;
+}
